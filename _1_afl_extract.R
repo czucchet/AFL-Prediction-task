@@ -66,7 +66,7 @@ fixture_create = function(year, db_dir){
     v_df2[[1]] = left_join(v_df2[[1]],home_data)
     v_df2[[2]] = left_join(v_df2[[2]],away_data)
     v_df5 = rbindlist(v_df2)
-    v_all = left_join(v_df5,v_df4);v_all[v_all == "?"] <- 0
+    v_all = left_join(v_df5,v_df4);v_all[v_all == "?"] <- 0;v_all[v_all == "Â"] <- 0
     db_check_afl = try(dbGetQuery(con, "SELECT Player FROM Player_Detail"),silent = TRUE)
     if(class(db_check_afl) == "try-error"){
       dbWriteTable(con, "Player_Detail", v_all,overwrite = T)
@@ -74,12 +74,12 @@ fixture_create = function(year, db_dir){
     if(class(db_check_afl) != "try-error"){
       dbWriteTable(con, "Player_Detail", v_all,append = T)      
       }
-    }
-  db_clean_afl = try(dbGetQuery(con, "SELECT * FROM Player_Detail"),silent = TRUE)
-  if(class(db_clean_afl) != "try-error"){
-  all_records_temp =  dbGetQuery(con, "SELECT * FROM Player_Detail")
-  all_records = unique(all_records_temp)
-  dbWriteTable(con, "Player_Detail", all_records,overwrite = T)
+    db_clean_afl = try(dbGetQuery(con, "SELECT * FROM Player_Detail"),silent = TRUE)
+    if(class(db_clean_afl) != "try-error"){
+      all_records_temp =  dbGetQuery(con, "SELECT * FROM Player_Detail")
+      all_records = unique(all_records_temp)
+      dbWriteTable(con, "Player_Detail", all_records,overwrite = T)
+      }
     }
   }
   
@@ -88,9 +88,8 @@ fixture_create(2014,"C:/Users/Chris Zucchet/Documents/AFL") #Done
 fixture_create(2015,"C:/Users/Chris Zucchet/Documents/AFL") #Done
 fixture_create(2016,"C:/Users/Chris Zucchet/Documents/AFL") #Done
 fixture_create(2017,"C:/Users/Chris Zucchet/Documents/AFL") #Done
-fixture_create(2018,"C:/Users/Chris Zucchet/Documents/AFL") #Done
+fixture_create(2018,"C:/Users/Chris Zucchet/Documents/AFL") 
 
 con = dbConnect(SQLite(), "PlayerRecords.sqlite")
-records = unique(dbGetQuery(con, "SELECT * FROM Player_Detail"))
-#dbDisconnect(SQLite(), "PlayerRecords.sqlite")
+ 
 

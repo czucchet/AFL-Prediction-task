@@ -5,9 +5,12 @@ con = dbConnect(SQLite(), "PlayerRecords.sqlite")
 num_cols = c("KI","MK","HB","GL","BH","HO","TK","RB","IF","CL","CG","FF","FA","BR","CP","UP","CM","MI","one_pc","BO","GA","game_played","Year","Round","Diff","Age_Years","Games","PercentWon")
 scale_cols = c("KI","MK","HB","GL","BH","HO","TK","RB","IF","CL","CG","FF","FA","CP","UP","CM","MI","one_pc","BO","GA","game_played","Age_Years","Games","PercentWon","dt_score","error_rate","fairness")
 
-records = unique(dbGetQuery(con, "SELECT * FROM Player_Detail")) %>% na.omit()%>% 
-  rename(number = "#", one_pc = "1%", game_played = "%P") %>%  replace("Â",0) 
-records_t2 = records %>%  mutate_if(names(records) %in% num_cols, as.numeric)%>% na.omit() %>%select(-Â);rm(records)
+records = dbGetQuery(con, "SELECT * FROM Player_Detail") %>%group_by(Player,KI,MK,CP,Team,ID) %>%
+  filter(row_number(HB) == 1) %>% ungroup() %>% rename(number = "#", one_pc = "1%", game_played = "%P") 
+records[records == "Â"] <- "0" 
+records2 = records %>% anti_join(records %>% group_by(ID) %>% summarise(BR_SUM = sum(as.numeric(BR))) %>% 
+            filter(BR_SUM != 6))
+records_t2 = records2 %>%  mutate_if(names(records) %in% num_cols, as.numeric)%>% na.omit() ;rm(records)
 
 teams = unique(dbGetQuery(con, "SELECT Team, GL FROM Player_Detail"));teams = sort(unique(teams[,"Team"]));state = c("SA","QLD","VIC","VIC","VIC","WA","VIC","QLD","NSW","VIC","VIC","VIC","SA","VIC","VIC","NSW","WA","VIC")
 home_team = data.frame(Team = teams,home_state = state) %>% mutate_if(is.factor, as.character);away_team = data.frame(Opponent = teams,away_state = state) %>% mutate_if(is.factor, as.character)
@@ -32,7 +35,7 @@ rec_all = bind_rows(rec_split) %>% select(-number,-Player,-DI,-ID);rm(rec_split)
 rec_train =  recipe(BR ~., rec_all) %>%
   step_dummy(Team,Home_Away,Opponent, home_state, away_state) %>%
   step_other(Venue, threshold = .2) %>%
-  step_dummy(Venue) %>% 
+  step_dummy(Venue) %>%
   prep() %>%
   bake(newdata =  rec_all)
 
@@ -48,7 +51,7 @@ train_matrix <- xgb.DMatrix(data = as.matrix(bal_data_all %>%select(-BR)),
                             label = as.matrix(bal_data_all %>%select(BR)))
 param <- list(objective = "multi:softprob",eval_metric = "merror",num_class = 4,max_depth = 5,eta = 0.025,
               gamma = 0.01, min_child_weight = 4)
-cv.nround = 600;cv.nfold = 5
+cv.nround = 1000;cv.nfold = 5
 model_cv = xgb.cv(data=train_matrix, params = param,  
                nfold=cv.nfold, nrounds=cv.nround,
                verbose = 3)
