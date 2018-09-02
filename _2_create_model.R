@@ -1,5 +1,5 @@
 setwd("C:/Users/Chris Zucchet/Documents/AFL-Prediction-task")
-library(DMwR);library(tidyverse);library(DBI);library(xgboost);library(recipes);library(rsample);library(RSQLite);library(purrr);library(e1071);library(digest);library(mlr);library(parallelMap)
+library(DMwR);library(tidyverse);library(DBI);library(xgboost);library(recipes);library(rsample);library(RSQLite);library(purrr);library(e1071);library(digest);library(mlr);library(parallelMap);library(caret)
 range01 <- function(x){(x-min(x))/(max(x)-min(x))}
 con = dbConnect(SQLite(), "PlayerRecords.sqlite")
 num_cols = c("KI","MK","HB","GL","BH","HO","TK","RB","IF","CL","CG","FF","FA","BR","CP","UP","CM","MI","one_pc","BO","GA","game_played","Year","Round","Diff","Age_Years","Games","PercentWon")
@@ -17,13 +17,24 @@ home_team = data.frame(Team = teams,home_state = state) %>% mutate_if(is.factor,
 
 records_t3 = records_t2 %>%
   mutate(is_winner = ifelse(Diff >0,1,0),
-         games_1_10 =  ifelse(Games <= 10, 1,0),games_11_50 = ifelse(Games > 10 & Games <= 50, 1,0),games_51_more = ifelse(Games > 50, 1,0),
-         dt_score = (KI*3)+(HB*2)+(MK*3)+(GL*6)+(BH*1)+(TK*3)+(HO*1)+(FF*1)+(FA*-3)+(GA*3),
+         is_1_6_margin = ifelse(abs(Diff) <= 6,1,0),is_7_30_margin = ifelse(abs(Diff) > 6 & abs(Diff) <= 30,1,0),is_30_margin = ifelse(abs(Diff) >= 31,1,0),
+         is_6_margin = ifelse(abs(Diff) <= 6,1,0),is_30_margin = ifelse(abs(Diff) <= 30,1,0),is_50_margin = ifelse(abs(Diff) <= 50,1,0),is_100_margin = ifelse(abs(Diff) <= 100,1,0),
+         games_1_10 =  ifelse(Games <= 10, 1,0), games_0_50 = ifelse(Games <= 50, 1,0),         #games_51_more = ifelse(Games > 50, 1,0),
+         dt_score = (KI*2.5)+(HB*1.5)+(MK*3)+(GL*7)+(BH*2)+(TK*2)+(HO*1.5)+(FF*1)+(FA*-3),
          error_rate = CG/(KI+HB),
          fairness = FF-FA,
-         impact_plays = (IF*0.5)+(TK*0.25)+(MI*2)+(one_pc*3)+(BO*1)+(GA*3)+(RB*0.5))
+         is_no_errors =  ifelse(CG == 0,1,0),
+         impact_plays = (IF*0.5)+(TK*0.25)+(MI*1)+(one_pc*3)+(BO*0.25)+(GA*1.5)+(RB*1)+(CG*-1)+(CL*1)+(CM*1),
+#         CP_score =(CP*1.5)+(UP*0.75),
+         gl_dt =(GL*6)/((KI*2.5)+(HB*1.5)+(MK*3)+(GL*6)+(BH*2)+(TK*4)+(HO*1)+(FF*1)+(FA*-3))) %>%
+  group_by(ID,Team) %>%
+  mutate(GL_Sum = sum(GL),CM_Sum = sum(CM),MI_Sum = sum(MI),CG_Sum = sum(CG)) %>%
+  ungroup(ID) %>%
+  mutate(GL_prop = GL/GL_Sum,CG_prop = CM/CM_Sum,MI_prop = MI/MI_Sum,CG_prop = CG/CG_Sum) %>% select(-GL_Sum,-CM_Sum,-MI_Sum,-CG_Sum)
+
+    
 records_t4 = records_t3 %>% left_join(home_team) %>% left_join(away_team);rm(records_t3);rm(home_team);rm(away_team)
-records_t5 = records_t4 %>% mutate(interstate = ifelse(home_state != away_state, 1,0));rm(records_t4) 
+records_t5 = records_t4 %>% mutate(interstate = ifelse(home_state != away_state, 1,0));rm(records_t4)
 
 rec_split = records_t5 %>% split(.$ID)
 for(i in 1:length(rec_split)){
@@ -64,13 +75,15 @@ train_matrix <- xgb.DMatrix(data = as.matrix(bal_data_all %>%select(-BR)),
                             label = as.matrix(bal_data_all %>%select(BR)))
 param <- list(objective = "multi:softprob",eval_metric = "merror",num_class = 4,max_depth = 5,eta = 0.025,
               gamma = 0.01, min_child_weight = 4)
+
 cv.nround = 1000;cv.nfold = 5
-model_cv = xgb.cv(data=train_matrix, params = param,  
-               nfold=cv.nfold, nrounds=cv.nround,
-               verbose = 3)
-min_error = min(model_cv$evaluation_log$test_merror_mean)
-min_error_index = which.min(model_cv$evaluation_log$test_merror_mean)
-min_error_index = 898
+#model_cv = xgb.cv(data=train_matrix, params = param,  
+#               nfold=cv.nfold, nrounds=cv.nround,
+#               verbose = 3)
+#min_error = min(model_cv$evaluation_log$test_merror_mean)
+#min_error_index = which.min(model_cv$evaluation_log$test_merror_mean)
+#min_error_index = 898
+min_error_index = 100
 xgb_model <- xgb.train (params = param,
                          data = train_matrix,
                          nrounds = min_error_index,
@@ -81,12 +94,8 @@ xgb_model <- xgb.train (params = param,
 
 xgb.save(xgb_model,'afl_model_pre2017')
 #xgb.save(xgb_model,'afl_model')
+xgb.importance(model = xgb_model) %>% head(25)
 
-
-?cor()
-records_t2 %>%
-  summarise_if( is.numeric, skewness )
-
-
+cor(records_t5$impact_plays,records_t5$BR)
 
 
