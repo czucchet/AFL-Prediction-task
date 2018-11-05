@@ -2,7 +2,7 @@ setwd("C:/Users/Chris Zucchet/Documents/AFL-Prediction-task")
 
 fixture_create = function(year, db_dir){
   library(readr);library(RSQLite);library(XML);library(httr);library(data.table);library(dplyr)
-  setwd(db_dir)
+#  setwd(db_dir)
   con = dbConnect(SQLite(), "PlayerRecords.sqlite")
   
   b_url = paste0("http://probabilistic-footy.monash.edu/~footy/data/fixture.",year,".txt")
@@ -83,11 +83,12 @@ fixture_create = function(year, db_dir){
     }
   }
   
-fixture_create(2013,"C:/Users/Chris Zucchet/Documents/AFL") #Done
-fixture_create(2014,"C:/Users/Chris Zucchet/Documents/AFL") #Done
-fixture_create(2015,"C:/Users/Chris Zucchet/Documents/AFL") #Done
-fixture_create(2016,"C:/Users/Chris Zucchet/Documents/AFL") #Done
-fixture_create(2017,"C:/Users/Chris Zucchet/Documents/AFL") #Done
+fixture_create(2013,"C:/Users/Chris Zucchet/Documents/AFL-Prediction-task") #Done
+fixture_create(2013) #Done
+fixture_create(2014,"C:/Users/Chris Zucchet/Documents/AFL-Prediction-task") #Done
+fixture_create(2015,"C:/Users/Chris Zucchet/Documents/AFL-Prediction-task") #Done
+fixture_create(2016,"C:/Users/Chris Zucchet/Documents/AFL-Prediction-task") #Done
+fixture_create(2017,"C:/Users/Chris Zucchet/Documents/AFL-Prediction-task") #Done
 fixture_create(2018,getwd()) 
 
 con = dbConnect(SQLite(), "PlayerRecords.sqlite")
