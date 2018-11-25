@@ -50,12 +50,12 @@ train_matrix <- xgb.DMatrix(data = as.matrix(rec_train %>%select(-dream_team)),
 
 param <- list(objective = "reg:linear",eval_metric = "rmse",max_depth = 5,eta = 0.025,
               gamma = 0.01, min_child_weight = 4)
-cv.nround = 5000;cv.nfold = 5
+cv.nround = 1000;cv.nfold = 5
 model_cv = xgb.cv(data=train_matrix, params = param,  
                nfold=cv.nfold, nrounds=cv.nround,
                verbose = 3)
-#min_error = min(model_cv$evaluation_log$test_merror_mean)
-#min_error_index = which.min(model_cv$evaluation_log$test_merror_mean)
+min_error = min(model_cv$evaluation_log$test_rmse_mean)
+min_error_index = which.min(model_cv$evaluation_log$test_rmse_mean)
 #min_error_index = 898
 
 xgb_model <- xgb.train(params = param,
@@ -66,5 +66,6 @@ xgb_model <- xgb.train(params = param,
                          print_every_n = 5,
                          maximize = F)
 
+xgb.save(xgb_model,'dt_xgb_model')
 
 

@@ -89,7 +89,7 @@ fixture_create(2014,"C:/Users/Chris Zucchet/Documents/AFL-Prediction-task") #Don
 fixture_create(2015,"C:/Users/Chris Zucchet/Documents/AFL-Prediction-task") #Done
 fixture_create(2016,"C:/Users/Chris Zucchet/Documents/AFL-Prediction-task") #Done
 fixture_create(2017,"C:/Users/Chris Zucchet/Documents/AFL-Prediction-task") #Done
-fixture_create(2018,getwd()) 
+fixture_create(2018) 
 
 con = dbConnect(SQLite(), "PlayerRecords.sqlite")
  
